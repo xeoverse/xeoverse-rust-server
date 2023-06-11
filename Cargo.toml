@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 actix-web = "4"
 actix-cors = "0.6.4"
+actix-web-actors = "4.2.0"
+actix = "0.13.0"
