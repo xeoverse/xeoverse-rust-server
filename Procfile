@@ -1,0 +1,1 @@
+web: ./target/release/xeoverse-rust-server

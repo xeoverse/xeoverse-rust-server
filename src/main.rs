@@ -5,6 +5,7 @@ use actix_web::{
     Responder,
 };
 use actix_web_actors::ws;
+use std::env;
 
 /// Define HTTP actor
 struct WebSocket;
@@ -39,9 +40,17 @@ async fn hello() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let port = env::var("PORT")
+    .unwrap_or_else(|_| "8080".to_string())
+    .parse()
+    .expect("PORT must be a number");
+
+    let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let origin = env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+
+    HttpServer::new(move || {
         let cors: Cors = Cors::default()
-            .allowed_origin("http://localhost:3000")
+            .allowed_origin(&origin)
             .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(&[header::AUTHORIZATION, header::ACCEPT])
             .allowed_header(header::CONTENT_TYPE)
@@ -55,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .wrap(Logger::default())
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((host, port))?
     .run()
     .await
 }
