@@ -63,6 +63,15 @@ impl Handler<Connect> for SocketManager {
         let id: usize = self.rng.gen::<usize>();
         self.sessions.insert(id, msg.addr);
 
+        self.emit_message(
+            &to_string(&json!({
+                "type": "userJoin",
+                "userId": id
+            }))
+            .unwrap(),
+            0,
+        );
+
         id
     }
 }
@@ -75,7 +84,14 @@ impl Handler<Disconnect> for SocketManager {
 
         self.sessions.remove(&msg.id);
 
-        self.emit_message("Someone disconnected", 0);
+        self.emit_message(
+            &to_string(&json!({
+                "type": "userLeave",
+                "userId": msg.id
+            }))
+            .unwrap(),
+            msg.id,
+        );
     }
 }
 
@@ -83,10 +99,6 @@ impl Handler<ClientMessage> for SocketManager {
     type Result = ();
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        self.emit_message(msg.msg.as_str(), msg.id);
-
-        println!("Got message from {}: {}", msg.id, msg.msg);
-
         let json: Result<serde_json::Value, serde_json::Error> = from_str(&msg.msg);
 
         match json {
@@ -107,7 +119,7 @@ impl Handler<ClientMessage> for SocketManager {
                             "userId": user_id
                         });
 
-                        self.emit_message(&to_string(&response).unwrap(), 0);
+                        self.emit_message(&to_string(&response).unwrap(), msg.id);
                     }
                     _ => println!("Unknown action {}", action),
                 }

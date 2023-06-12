@@ -109,7 +109,24 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for SocketSession {
             ws::Message::Pong(_) => {
                 self.hb = Instant::now();
             }
-            ws::Message::Text(text) => {}
+            ws::Message::Text(text) => {
+                let msg = text.trim();
+                self.addr
+                    .send(server::ClientMessage {
+                        id: self.id,
+                        msg: msg.to_owned(),
+                    })
+                    .into_actor(self)
+                    .then(|res, _, ctx| {
+                        match res {
+                            Ok(_) => (),
+                            // something is wrong with chat server
+                            _ => ctx.stop(),
+                        }
+                        fut::ready(())
+                    })
+                    .wait(ctx);
+            }
             ws::Message::Binary(_) => println!("Unexpected binary"),
             ws::Message::Close(reason) => {
                 ctx.close(reason);
