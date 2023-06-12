@@ -61,6 +61,15 @@ impl Handler<Connect> for SocketManager {
         println!("Someone joined");
 
         let id: usize = self.rng.gen::<usize>();
+
+        msg.addr.do_send(Message(
+            to_string(&json!({
+                "type": "userInit",
+                "userId": id
+            }))
+            .unwrap(),
+        ));
+
         self.sessions.insert(id, msg.addr);
 
         self.emit_message(
@@ -108,15 +117,14 @@ impl Handler<ClientMessage> for SocketManager {
                 let action: &str = json.get("type").unwrap().as_str().unwrap();
 
                 match action {
-                    "move" => {
-                        let direction: &Vec<serde_json::Value> =
-                            json.get("direction").unwrap().as_array().unwrap();
-                        let user_id: &str = json.get("userId").unwrap().as_str().unwrap();
+                    "userMove" => {
+                        let position: &Vec<serde_json::Value> =
+                            json.get("position").unwrap().as_array().unwrap();
 
                         let response: serde_json::Value = json!({
-                            "type": "move",
-                            "direction": direction,
-                            "userId": user_id
+                            "type": "userMove",
+                            "position": position,
+                            "userId": msg.id
                         });
 
                         self.emit_message(&to_string(&response).unwrap(), msg.id);
