@@ -68,7 +68,7 @@ impl Handler<Connect> for SocketManager {
             to_string(&json!({
                 "type": "userInit",
                 "userId": id,
-                "userPositions": state::get_user_positions()
+                "userStates": state::get_all_users_states()
             }))
             .unwrap(),
         ));
@@ -139,6 +139,26 @@ impl Handler<ClientMessage> for SocketManager {
                         ];
 
                         state::update_user_position(msg.id, float_position);
+
+                        self.emit_message(&to_string(&response).unwrap(), msg.id);
+                    }
+                    "userRotate" => {
+                        let rotation: &Vec<serde_json::Value> =
+                            json.get("rotation").unwrap().as_array().unwrap();
+
+                        let response: serde_json::Value = json!({
+                            "type": "userRotate",
+                            "rotation": rotation,
+                            "userId": msg.id
+                        });
+
+                        let float_rotation: [f64; 3] = [
+                            rotation[0].as_f64().unwrap(),
+                            rotation[1].as_f64().unwrap(),
+                            rotation[2].as_f64().unwrap(),
+                        ];
+
+                        state::update_user_rotation(msg.id, float_rotation);
 
                         self.emit_message(&to_string(&response).unwrap(), msg.id);
                     }
