@@ -1226,6 +1226,7 @@ dependencies = [
  "actix-cors",
  "actix-web",
  "actix-web-actors",
+ "once_cell",
  "rand",
  "serde_json",
 ]

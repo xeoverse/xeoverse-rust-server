@@ -4,6 +4,8 @@ use actix::prelude::*;
 use rand::{self, rngs::ThreadRng, Rng};
 use serde_json::{from_str, json, to_string};
 
+use crate::state;
+
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Message(pub String);
@@ -65,7 +67,8 @@ impl Handler<Connect> for SocketManager {
         msg.addr.do_send(Message(
             to_string(&json!({
                 "type": "userInit",
-                "userId": id
+                "userId": id,
+                "userPositions": state::get_user_positions()
             }))
             .unwrap(),
         ));
@@ -92,6 +95,8 @@ impl Handler<Disconnect> for SocketManager {
         println!("Someone disconnected");
 
         self.sessions.remove(&msg.id);
+
+        state::remove_user_position(msg.id);
 
         self.emit_message(
             &to_string(&json!({
@@ -126,6 +131,14 @@ impl Handler<ClientMessage> for SocketManager {
                             "position": position,
                             "userId": msg.id
                         });
+
+                        let float_position: [f64; 3] = [
+                            position[0].as_f64().unwrap(),
+                            position[1].as_f64().unwrap(),
+                            position[2].as_f64().unwrap(),
+                        ];
+
+                        state::update_user_position(msg.id, float_position);
 
                         self.emit_message(&to_string(&response).unwrap(), msg.id);
                     }

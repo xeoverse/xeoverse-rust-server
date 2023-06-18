@@ -8,6 +8,7 @@ use actix_web_actors::ws;
 use std::env;
 use std::time::Instant;
 
+mod state;
 mod server;
 mod session;
 
