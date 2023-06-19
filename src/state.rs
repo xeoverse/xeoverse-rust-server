@@ -2,24 +2,24 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Mutex};
 
-static USER_ROTATIONS: Lazy<Mutex<HashMap<usize, [f64; 3]>>> = Lazy::new(|| {
-    let m: HashMap<usize, [f64; 3]> = HashMap::new();
+static USER_ROTATIONS: Lazy<Mutex<HashMap<usize, [f32; 3]>>> = Lazy::new(|| {
+    let m: HashMap<usize, [f32; 3]> = HashMap::new();
     Mutex::new(m)
 });
 
-pub fn get_user_rotations() -> HashMap<usize, [f64; 3]> {
+pub fn get_user_rotations() -> HashMap<usize, [f32; 3]> {
     USER_ROTATIONS.lock().unwrap().clone()
 }
 
-pub fn get_user_rotation(user_id: usize) -> Option<[f64; 3]> {
+pub fn get_user_rotation(user_id: usize) -> Option<[f32; 3]> {
     USER_ROTATIONS.lock().unwrap().get(&user_id).copied()
 }
 
-pub fn set_user_rotation(user_id: usize, rotation: [f64; 3]) {
+pub fn set_user_rotation(user_id: usize, rotation: [f32; 3]) {
     USER_ROTATIONS.lock().unwrap().insert(user_id, rotation);
 }
 
-pub fn update_user_rotation(user_id: usize, rotation: [f64; 3]) {
+pub fn update_user_rotation(user_id: usize, rotation: [f32; 3]) {
     let old_rotation = USER_ROTATIONS
         .lock()
         .unwrap()
@@ -38,24 +38,24 @@ pub fn remove_user_rotation(user_id: usize) {
     USER_ROTATIONS.lock().unwrap().remove(&user_id);
 }
 
-static USER_POSITIONS: Lazy<Mutex<HashMap<usize, [f64; 3]>>> = Lazy::new(|| {
-    let m: HashMap<usize, [f64; 3]> = HashMap::new();
+static USER_POSITIONS: Lazy<Mutex<HashMap<usize, [f32; 3]>>> = Lazy::new(|| {
+    let m: HashMap<usize, [f32; 3]> = HashMap::new();
     Mutex::new(m)
 });
 
-pub fn get_user_positions() -> HashMap<usize, [f64; 3]> {
+pub fn get_user_positions() -> HashMap<usize, [f32; 3]> {
     USER_POSITIONS.lock().unwrap().clone()
 }
 
-pub fn get_user_position(user_id: usize) -> Option<[f64; 3]> {
+pub fn get_user_position(user_id: usize) -> Option<[f32; 3]> {
     USER_POSITIONS.lock().unwrap().get(&user_id).copied()
 }
 
-pub fn set_user_position(user_id: usize, position: [f64; 3]) {
+pub fn set_user_position(user_id: usize, position: [f32; 3]) {
     USER_POSITIONS.lock().unwrap().insert(user_id, position);
 }
 
-pub fn update_user_position(user_id: usize, position: [f64; 3]) {
+pub fn update_user_position(user_id: usize, position: [f32; 3]) {
     let old_position = USER_POSITIONS.lock().unwrap().get(&user_id).copied();
 
     let new_position = match old_position {
@@ -80,8 +80,8 @@ pub fn remove_user_position(user_id: usize) {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserState {
     pub user_id: usize,
-    pub position: [f64; 3],
-    pub rotation: [f64; 3],
+    pub position: [f32; 3],
+    pub rotation: [f32; 3],
 }
 
 pub fn get_all_users_states() -> HashMap<usize, UserState> {

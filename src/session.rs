@@ -5,49 +5,26 @@ use actix_web_actors::ws;
 
 use crate::server;
 
-/// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-
-/// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 pub struct SocketSession {
-    /// unique session id
     pub id: usize,
-
-    /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
-    /// otherwise we drop connection.
     pub hb: Instant,
-
-    /// peer name
     pub name: Option<String>,
-
-    /// Chat server
     pub addr: Addr<server::SocketManager>,
 }
 
 impl SocketSession {
-    /// helper method that sends ping to client every 5 seconds (HEARTBEAT_INTERVAL).
-    ///
-    /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                // heartbeat timed out
                 println!("Websocket Client heartbeat failed, disconnecting!");
-
-                // notify chat server
                 act.addr.do_send(server::Disconnect { id: act.id });
-
-                // stop actor
                 ctx.stop();
-
-                // don't try to send a ping
                 return;
             }
-
             ctx.ping(b"");
         });
     }
@@ -68,7 +45,6 @@ impl Actor for SocketSession {
             .then(|res, act, ctx| {
                 match res {
                     Ok(res) => act.id = res,
-                    // something is wrong with chat server
                     _ => ctx.stop(),
                 }
                 fut::ready(())
@@ -77,7 +53,6 @@ impl Actor for SocketSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        // notify chat server
         self.addr.do_send(server::Disconnect { id: self.id });
         Running::Stop
     }
@@ -114,20 +89,36 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for SocketSession {
                 self.addr
                     .send(server::ClientMessage {
                         id: self.id,
-                        msg: msg.to_owned(),
+                        text: Some(String::from(msg)),
+                        bytes: None,
                     })
                     .into_actor(self)
                     .then(|res, _, ctx| {
                         match res {
                             Ok(_) => (),
-                            // something is wrong with chat server
                             _ => ctx.stop(),
                         }
                         fut::ready(())
                     })
                     .wait(ctx);
             }
-            ws::Message::Binary(_) => println!("Unexpected binary"),
+            ws::Message::Binary(bytes) => {
+                self.addr
+                    .send(server::ClientMessage {
+                        id: self.id,
+                        text: None,
+                        bytes: Some(bytes),
+                    })
+                    .into_actor(self)
+                    .then(|res, _, ctx| {
+                        match res {
+                            Ok(_) => (),
+                            _ => ctx.stop(),
+                        }
+                        fut::ready(())
+                    })
+                    .wait(ctx);
+            }
             ws::Message::Close(reason) => {
                 ctx.close(reason);
                 ctx.stop();

@@ -11,6 +11,8 @@ use std::time::Instant;
 mod server;
 mod session;
 mod state;
+mod physics;
+mod render_loop;
 
 async fn websocket_route(
     req: HttpRequest,
@@ -41,7 +43,9 @@ async fn main() -> std::io::Result<()> {
         .parse()
         .expect("PORT must be a number");
 
-    let host: String = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    // render_loop::run();
+
+    let host: String = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let origin: String = env::var("ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let server: Addr<server::SocketManager> = server::SocketManager::new().start();

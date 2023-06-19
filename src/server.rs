@@ -1,8 +1,10 @@
 use std::collections::HashMap;
+use std::str;
 
 use actix::prelude::*;
+use actix_web::web::Bytes;
 use rand::{self, rngs::ThreadRng, Rng};
-use serde_json::{from_str, json, to_string};
+use serde_json::{json, to_string};
 
 use crate::state;
 
@@ -26,7 +28,8 @@ pub struct Disconnect {
 #[rtype(result = "()")]
 pub struct ClientMessage {
     pub id: usize,
-    pub msg: String,
+    pub text: Option<String>,
+    pub bytes: Option<Bytes>,
 }
 
 #[derive(Debug)]
@@ -113,59 +116,56 @@ impl Handler<ClientMessage> for SocketManager {
     type Result = ();
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        let json: Result<serde_json::Value, serde_json::Error> = from_str(&msg.msg);
+        if msg.text.is_some() && msg.bytes.is_none() {
+            let mut text = msg.text.as_ref().unwrap().split_whitespace();
 
-        match json {
-            Ok(json) => {
-                let json: &serde_json::Map<String, serde_json::Value> = json.as_object().unwrap();
+            let msg_type = text.next().unwrap();
+            let data = text.next().unwrap();
 
-                let action: &str = json.get("type").unwrap().as_str().unwrap();
+            match msg_type {
+                "userMove" => {
+                    let position: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
 
-                match action {
-                    "userMove" => {
-                        let position: &Vec<serde_json::Value> =
-                            json.get("position").unwrap().as_array().unwrap();
+                    let floats = [position[0], position[1], position[2]];
 
-                        let response: serde_json::Value = json!({
-                            "type": "userMove",
-                            "position": position,
-                            "userId": msg.id
-                        });
+                    state::update_user_position(msg.id, floats);
 
-                        let float_position: [f64; 3] = [
-                            position[0].as_f64().unwrap(),
-                            position[1].as_f64().unwrap(),
-                            position[2].as_f64().unwrap(),
-                        ];
+                    let response: serde_json::Value = json!({
+                        "type": "userMove",
+                        "position": position,
+                        "userId": msg.id
+                    });
 
-                        state::update_user_position(msg.id, float_position);
-
-                        self.emit_message(&to_string(&response).unwrap(), msg.id);
-                    }
-                    "userRotate" => {
-                        let rotation: &Vec<serde_json::Value> =
-                            json.get("rotation").unwrap().as_array().unwrap();
-
-                        let response: serde_json::Value = json!({
-                            "type": "userRotate",
-                            "rotation": rotation,
-                            "userId": msg.id
-                        });
-
-                        let float_rotation: [f64; 3] = [
-                            rotation[0].as_f64().unwrap(),
-                            rotation[1].as_f64().unwrap(),
-                            rotation[2].as_f64().unwrap(),
-                        ];
-
-                        state::update_user_rotation(msg.id, float_rotation);
-
-                        self.emit_message(&to_string(&response).unwrap(), msg.id);
-                    }
-                    _ => println!("Unknown action {}", action),
+                    self.emit_message(&to_string(&response).unwrap(), msg.id);
                 }
+                "userRotate" => {
+                    let rotation: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
+
+                    let floats = [rotation[0], rotation[1], rotation[2]];
+
+                    state::update_user_rotation(msg.id, floats);
+
+                    let response: serde_json::Value = json!({
+                        "type": "userRotate",
+                        "rotation": rotation,
+                        "userId": msg.id
+                    });
+
+                    self.emit_message(&to_string(&response).unwrap(), msg.id);
+                }
+                _ => println!("Unknown action {}", msg_type),
             }
-            Err(e) => println!("Error parsing JSON: {}", e),
+        } else if msg.bytes.is_some() && msg.text.is_none() {
+            let bytes = msg.bytes.as_ref().unwrap();
+
+            // let s = match str::from_utf8(bytes) {
+            //     Ok(v) => v,
+            //     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+            // };
+
+            print!("Received bytes: {}", bytes.len())
+        } else {
+            println!("Invalid message");
         }
     }
 }
