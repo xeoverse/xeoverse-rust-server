@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-use std::str;
-
 use actix::prelude::*;
 use actix_web::web::Bytes;
-use rand::{self, rngs::ThreadRng, Rng};
 use serde_json::json;
+use std::collections::HashMap;
+use std::str;
 
 use crate::state;
 
@@ -35,14 +33,22 @@ pub struct ClientMessage {
 #[derive(Debug)]
 pub struct SocketManager {
     sessions: HashMap<usize, Recipient<Message>>,
-    rng: ThreadRng,
+    current_user_id: usize,
 }
+
+// const MESSAGE_TYPES: [&str; 5] = [
+//     "userInit",
+//     "userJoin",
+//     "userLeave",
+//     "userMove",
+//     "userRotate",
+// ];
 
 impl SocketManager {
     pub fn new() -> SocketManager {
         SocketManager {
             sessions: HashMap::new(),
-            rng: rand::thread_rng(),
+            current_user_id: 0,
         }
     }
 
@@ -65,15 +71,18 @@ impl Handler<Connect> for SocketManager {
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
         println!("Someone joined");
 
-        let id: usize = self.rng.gen::<usize>();
+        let id: usize = self.current_user_id + 1;
+        self.current_user_id = id;
 
         let data: serde_json::Value = json!(state::get_all_users_states());
-        let init_response = "userInit".to_owned() + " " + &id.to_string() + " " + &data.to_string();
+
+        let init_response = format!("{} {} {}", 0, id.to_string(), data);
         msg.addr.do_send(Message(init_response));
 
         self.sessions.insert(id, msg.addr);
 
-        let join_response = "userJoin".to_owned() + " " + &id.to_string();
+        let join_response = format!("{} {}", 1, id.to_string());
+
         self.emit_message(&join_response, 0);
 
         id
@@ -90,7 +99,7 @@ impl Handler<Disconnect> for SocketManager {
 
         state::remove_user_position(msg.id);
 
-        let leave_response = "userLeave".to_owned() + " " + &msg.id.to_string();
+        let leave_response = format!("{} {}", 2, msg.id.to_string());
         self.emit_message(&leave_response, msg.id);
     }
 }
@@ -106,24 +115,23 @@ impl Handler<ClientMessage> for SocketManager {
             let data = text.next().unwrap();
 
             match msg_type {
-                "userMove" => {
+                "3" => {
                     let position: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
-                    let floats = [position[0], position[1], position[2]];
 
-                    state::update_user_position(msg.id, floats);
+                    state::update_user_position(msg.id, [position[0], position[1], position[2]]);
 
-                    let response = "userMove".to_owned() + " " + &msg.id.to_string() + " " + &data;
-                    self.emit_message(response.as_str(), msg.id);
+                    let move_response = format!("{} {} {}", 3, msg.id.to_string(), data);
+
+                    self.emit_message(&move_response, msg.id);
                 }
-                "userRotate" => {
+                "4" => {
                     let rotation: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
-                    let floats = [rotation[0], rotation[1], rotation[2]];
 
-                    state::update_user_rotation(msg.id, floats);
+                    state::update_user_rotation(msg.id, [rotation[0], rotation[1], rotation[2]]);
 
-                    let response =
-                        "userRotate".to_owned() + " " + &msg.id.to_string() + " " + &data;
-                    self.emit_message(response.as_str(), msg.id);
+                    let rotate_response = format!("{} {} {}", 4, msg.id.to_string(), data);
+
+                    self.emit_message(&rotate_response, msg.id);
                 }
                 _ => println!("Unknown action {}", msg_type),
             }

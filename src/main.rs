@@ -8,11 +8,11 @@ use actix_web_actors::ws;
 use std::env;
 use std::time::Instant;
 
+mod physics;
+mod render_loop;
 mod server;
 mod session;
 mod state;
-mod physics;
-mod render_loop;
 
 async fn websocket_route(
     req: HttpRequest,

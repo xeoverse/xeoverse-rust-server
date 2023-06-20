@@ -7,18 +7,6 @@ static USER_ROTATIONS: Lazy<Mutex<HashMap<usize, [f32; 3]>>> = Lazy::new(|| {
     Mutex::new(m)
 });
 
-pub fn get_user_rotations() -> HashMap<usize, [f32; 3]> {
-    USER_ROTATIONS.lock().unwrap().clone()
-}
-
-pub fn get_user_rotation(user_id: usize) -> Option<[f32; 3]> {
-    USER_ROTATIONS.lock().unwrap().get(&user_id).copied()
-}
-
-pub fn set_user_rotation(user_id: usize, rotation: [f32; 3]) {
-    USER_ROTATIONS.lock().unwrap().insert(user_id, rotation);
-}
-
 pub fn update_user_rotation(user_id: usize, rotation: [f32; 3]) {
     let old_rotation = USER_ROTATIONS
         .lock()
@@ -34,26 +22,10 @@ pub fn update_user_rotation(user_id: usize, rotation: [f32; 3]) {
     USER_ROTATIONS.lock().unwrap().insert(user_id, new_rotation);
 }
 
-pub fn remove_user_rotation(user_id: usize) {
-    USER_ROTATIONS.lock().unwrap().remove(&user_id);
-}
-
 static USER_POSITIONS: Lazy<Mutex<HashMap<usize, [f32; 3]>>> = Lazy::new(|| {
     let m: HashMap<usize, [f32; 3]> = HashMap::new();
     Mutex::new(m)
 });
-
-pub fn get_user_positions() -> HashMap<usize, [f32; 3]> {
-    USER_POSITIONS.lock().unwrap().clone()
-}
-
-pub fn get_user_position(user_id: usize) -> Option<[f32; 3]> {
-    USER_POSITIONS.lock().unwrap().get(&user_id).copied()
-}
-
-pub fn set_user_position(user_id: usize, position: [f32; 3]) {
-    USER_POSITIONS.lock().unwrap().insert(user_id, position);
-}
 
 pub fn update_user_position(user_id: usize, position: [f32; 3]) {
     let old_position = USER_POSITIONS.lock().unwrap().get(&user_id).copied();
