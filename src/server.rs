@@ -122,7 +122,7 @@ impl Handler<ClientMessage> for SocketManager {
                     state::update_user_rotation(msg.id, floats);
 
                     let response =
-                        "userRotate".to_owned() + " " + " " + &msg.id.to_string() + " " + &data;
+                        "userRotate".to_owned() + " " + &msg.id.to_string() + " " + &data;
                     self.emit_message(response.as_str(), msg.id);
                 }
                 _ => println!("Unknown action {}", msg_type),
