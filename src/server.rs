@@ -4,7 +4,7 @@ use std::str;
 use actix::prelude::*;
 use actix_web::web::Bytes;
 use rand::{self, rngs::ThreadRng, Rng};
-use serde_json::{json, to_string};
+use serde_json::json;
 
 use crate::state;
 
@@ -67,25 +67,14 @@ impl Handler<Connect> for SocketManager {
 
         let id: usize = self.rng.gen::<usize>();
 
-        msg.addr.do_send(Message(
-            to_string(&json!({
-                "type": "userInit",
-                "userId": id,
-                "userStates": state::get_all_users_states()
-            }))
-            .unwrap(),
-        ));
+        let data: serde_json::Value = json!(state::get_all_users_states());
+        let init_response = "userInit".to_owned() + " " + &id.to_string() + " " + &data.to_string();
+        msg.addr.do_send(Message(init_response));
 
         self.sessions.insert(id, msg.addr);
 
-        self.emit_message(
-            &to_string(&json!({
-                "type": "userJoin",
-                "userId": id
-            }))
-            .unwrap(),
-            0,
-        );
+        let join_response = "userJoin".to_owned() + " " + &id.to_string();
+        self.emit_message(&join_response, 0);
 
         id
     }
@@ -101,14 +90,8 @@ impl Handler<Disconnect> for SocketManager {
 
         state::remove_user_position(msg.id);
 
-        self.emit_message(
-            &to_string(&json!({
-                "type": "userLeave",
-                "userId": msg.id
-            }))
-            .unwrap(),
-            msg.id,
-        );
+        let leave_response = "userLeave".to_owned() + " " + &msg.id.to_string();
+        self.emit_message(&leave_response, msg.id);
     }
 }
 
@@ -125,33 +108,22 @@ impl Handler<ClientMessage> for SocketManager {
             match msg_type {
                 "userMove" => {
                     let position: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
-
                     let floats = [position[0], position[1], position[2]];
 
                     state::update_user_position(msg.id, floats);
 
-                    let response: serde_json::Value = json!({
-                        "type": "userMove",
-                        "position": position,
-                        "userId": msg.id
-                    });
-
-                    self.emit_message(&to_string(&response).unwrap(), msg.id);
+                    let response = "userMove".to_owned() + " " + &msg.id.to_string() + " " + &data;
+                    self.emit_message(response.as_str(), msg.id);
                 }
                 "userRotate" => {
                     let rotation: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
-
                     let floats = [rotation[0], rotation[1], rotation[2]];
 
                     state::update_user_rotation(msg.id, floats);
 
-                    let response: serde_json::Value = json!({
-                        "type": "userRotate",
-                        "rotation": rotation,
-                        "userId": msg.id
-                    });
-
-                    self.emit_message(&to_string(&response).unwrap(), msg.id);
+                    let response =
+                        "userRotate".to_owned() + " " + " " + &msg.id.to_string() + " " + &data;
+                    self.emit_message(response.as_str(), msg.id);
                 }
                 _ => println!("Unknown action {}", msg_type),
             }
