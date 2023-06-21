@@ -42,6 +42,7 @@ pub struct SocketManager {
 //     "userLeave",
 //     "userMove",
 //     "userRotate",
+//     "userShoot"
 // ];
 
 impl SocketManager {
@@ -112,26 +113,35 @@ impl Handler<ClientMessage> for SocketManager {
             let mut text = msg.text.as_ref().unwrap().split_whitespace();
 
             let msg_type = text.next().unwrap();
-            let data = text.next().unwrap();
+            let data1 = text.next().unwrap();
 
             match msg_type {
                 "3" => {
-                    let position: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
+                    let position: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
 
                     state::update_user_position(msg.id, [position[0], position[1], position[2]]);
 
-                    let move_response = format!("{} {} {}", 3, msg.id.to_string(), data);
+                    let move_response = format!("{} {} {}", 3, msg.id.to_string(), data1);
 
                     self.emit_message(&move_response, msg.id);
                 }
                 "4" => {
-                    let rotation: Vec<f32> = data.split(',').map(|s| s.parse().unwrap()).collect();
+                    let rotation: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
 
                     state::update_user_rotation(msg.id, [rotation[0], rotation[1], rotation[2]]);
 
-                    let rotate_response = format!("{} {} {}", 4, msg.id.to_string(), data);
+                    let rotate_response = format!("{} {} {}", 4, msg.id.to_string(), data1);
 
                     self.emit_message(&rotate_response, msg.id);
+                }
+                "5" => {
+                    let data2 = text.next().unwrap();
+                    // let position: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
+                    // let direction: Vec<f32> = data2.split(',').map(|s| s.parse().unwrap()).collect();
+
+                    let shoot_response = format!("{} {} {} {}", 5, msg.id.to_string(), data1, data2);
+
+                    self.emit_message(&shoot_response, msg.id);
                 }
                 _ => println!("Unknown action {}", msg_type),
             }
