@@ -3,6 +3,8 @@ use actix_web::web::Bytes;
 use serde_json::json;
 use std::collections::HashMap;
 use std::str;
+use std::thread;
+use std::time::Duration;
 
 use crate::state;
 
@@ -83,6 +85,8 @@ impl Handler<Connect> for SocketManager {
         self.sessions.insert(id, msg.addr);
 
         let join_response = format!("{} {}", 1, id.to_string());
+
+        thread::sleep(Duration::from_secs(2));
 
         self.emit_message(&join_response, 0);
 
