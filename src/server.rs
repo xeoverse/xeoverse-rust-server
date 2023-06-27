@@ -121,16 +121,26 @@ impl Handler<ClientMessage> for SocketManager {
 
             match msg_type {
                 "3" => {
-                    let position: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
+                    let position: Vec<f64> = data1.split(',').map(|s| s.parse().unwrap()).collect();
 
                     state::update_user_position(msg.id, [position[0], position[1], position[2]]);
 
-                    let move_response = format!("{} {} {}", 3, msg.id.to_string(), data1);
-
-                    self.emit_message(&move_response, msg.id);
+                    self.emit_message(
+                        &format!(
+                            "{} {} {:?}",
+                            3,
+                            msg.id.to_string(),
+                            state::get_user_position(msg.id)
+                                .iter()
+                                .map(|n| n.to_string())
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        ).replace("\"", ""),
+                        msg.id,
+                    );
                 }
                 "4" => {
-                    let rotation: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
+                    let rotation: Vec<f64> = data1.split(',').map(|s| s.parse().unwrap()).collect();
 
                     state::update_user_rotation(msg.id, [rotation[0], rotation[1], rotation[2]]);
 
@@ -140,10 +150,11 @@ impl Handler<ClientMessage> for SocketManager {
                 }
                 "5" => {
                     let data2 = text.next().unwrap();
-                    // let position: Vec<f32> = data1.split(',').map(|s| s.parse().unwrap()).collect();
-                    // let direction: Vec<f32> = data2.split(',').map(|s| s.parse().unwrap()).collect();
+                    // let position: Vec<f64> = data1.split(',').map(|s| s.parse().unwrap()).collect();
+                    // let direction: Vec<f64> = data2.split(',').map(|s| s.parse().unwrap()).collect();
 
-                    let shoot_response = format!("{} {} {} {}", 5, msg.id.to_string(), data1, data2);
+                    let shoot_response =
+                        format!("{} {} {} {}", 5, msg.id.to_string(), data1, data2);
 
                     self.emit_message(&shoot_response, msg.id);
                 }
