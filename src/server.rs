@@ -10,7 +10,10 @@ use crate::state;
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct Message(pub String);
+pub enum Message {
+    Text(String),
+    Binary(Vec<u8>),
+}
 
 #[derive(Message)]
 #[rtype(usize)]
@@ -58,7 +61,15 @@ impl SocketManager {
     fn emit_message(&self, message: &str, skip_id: usize) {
         for (id, addr) in self.sessions.iter() {
             if *id != skip_id {
-                addr.do_send(Message(message.to_owned()));
+                addr.do_send(Message::Text(message.to_owned()));
+            }
+        }
+    }
+
+    fn emit_bytes(&self, bytes: Bytes, skip_id: usize) {
+        for (id, addr) in self.sessions.iter() {
+            if *id != skip_id {
+                addr.do_send(Message::Binary(bytes.to_vec()));
             }
         }
     }
@@ -80,7 +91,7 @@ impl Handler<Connect> for SocketManager {
         let data: serde_json::Value = json!(state::get_all_users_states());
 
         let init_response = format!("{} {} {}", 0, id.to_string(), data);
-        msg.addr.do_send(Message(init_response));
+        msg.addr.do_send(Message::Text(init_response));
 
         self.sessions.insert(id, msg.addr);
 
@@ -161,14 +172,8 @@ impl Handler<ClientMessage> for SocketManager {
                 _ => println!("Unknown action {}", msg_type),
             }
         } else if msg.bytes.is_some() && msg.text.is_none() {
-            let bytes = msg.bytes.as_ref().unwrap();
-
-            // let s = match str::from_utf8(bytes) {
-            //     Ok(v) => v,
-            //     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-            // };
-
-            print!("Received bytes: {}", bytes.len())
+            let bytes = msg.bytes.unwrap();
+            self.emit_bytes(bytes, msg.id)
         } else {
             println!("Invalid message");
         }

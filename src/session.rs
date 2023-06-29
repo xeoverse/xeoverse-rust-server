@@ -62,7 +62,10 @@ impl Handler<server::Message> for SocketSession {
     type Result = ();
 
     fn handle(&mut self, msg: server::Message, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
+        match msg {
+            server::Message::Text(text) => ctx.text(text),
+            server::Message::Binary(bin) => ctx.binary(bin),
+        }
     }
 }
 
